@@ -1,10 +1,33 @@
 var BirthsByAgeChart={
     chartObj: undefined,
+    data:[],
     init: function(){
-        this.chartObj=new PieChart(this.getData());
+        this.prepData(this.getRawData());
+        this.chartObj=new PieChart(this.data);
         console.log(this.chartObj.data);
     },
-    getData: function(){
+    prepData: function(rawData){
+        this.data=[];
+        rawData=rawData || [];
+        var that=this;
+        rawData.forEach(function(d, i){
+            var obj={
+                year:d[0],
+                total:d[1],
+                age_u15:d[2],
+                age_15to19:d[3],
+                age_20to24:d[4],
+                age_25to29:d[5],
+                age_30to34:d[6],
+                age_35to39:d[7],
+                age_40to44:d[8],
+                age_45u:d[9],
+                age_unknown:d[10]
+            };
+            that.data.push(obj);
+        });
+    },
+    getRawData: function(){
        return [[2005,548700,756,50017,125529,143446,133741,75728,17982,1433,68],
                   [2004,544685,696,49737,124309,141608,134578,74580,17926,1201,50],
                   [2003,540827,710,49330,123815,140556,134809,72662,17692,1216,37],
