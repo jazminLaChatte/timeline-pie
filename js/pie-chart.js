@@ -1,8 +1,6 @@
 var PieChart = function(config){
     config = config || {};
     //init private vars and methods
-    this.innerR=50;
-    this.outerR=200;
     this.chartW=400;
     this.chartH=400;
     this.isTimeline=false;
@@ -13,15 +11,24 @@ var PieChart = function(config){
     };
     //set config vars
     $.extend(this,config);
-    //set chart radii
+    //TODO error check if data exists and this.data.values
+
+    //set chart radii if not set by user
     var minDimension = Math.min(this.chartW, this.chartH);
-    this.outerR = minDimension/2;
-    this.innerR = minDimension/4;
+    if(!this.outerR){
+      this.outerR = minDimension/2;
+    }
+    if(!this.innerR){
+      this.innerR = minDimension/6;
+    }
     if(this.isTimeline){
-      //calculate min and max totals and generate scale for outerR
-      this.scaleR = d3.scaleLinear() //TODO
-        .domain([10, 130])
-        .range([0, 960]);
+      //create scale for outerR
+      var totals = this.data.values.map(function(val){
+        return val.total;
+      });
+      this.outerRScale = d3.scaleLinear() //TODO
+        .domain([Math.min(...totals), Math.max(...totals)]) //calculate min and max totals
+        .range([this.outerR*0.8 , this.outerR]);
     }
 };
 
@@ -43,9 +50,8 @@ PieChart.prototype.drawTimelinePie = function(){
   //that.drawChart(this.data.values[0].values);
   this.data.values.forEach(function(obj, i){
     setTimeout(function(){
-      console.log("");
-      that.drawChart(obj.values);
-    }, i*5000);
+      that.drawChart(obj.values, obj.total);
+    }, i*2000);
   });
 };
 
@@ -59,7 +65,7 @@ PieChart.prototype.updateChart=function(newValues){
   console.log(transition);*/
 }
 
-PieChart.prototype.drawChart = function(pieValues) {
+PieChart.prototype.drawChart = function(pieValues, total) {
   pieValues=pieValues || [];
   if(pieValues.length==0){
     alert("No data defined for first piechart. Nothing to plot.");
@@ -68,24 +74,26 @@ PieChart.prototype.drawChart = function(pieValues) {
     var that=this;
     //calculate arc data
     var arcData = that.calculateArcData(pieValues);
+    //define arc function
+    var arc = d3.arc()
+        .outerRadius(that.outerRScale(total))
+        .innerRadius(that.innerR);
     //generate arc elements
     var arcs = this.svg.selectAll(".arc")
         .data(arcData, function(d,i){
           return d.startAngle+"-"+d.endAngle+"-"+i; //key
-        })
-        .enter()
+        });
+    var newArcs = arcs.enter()
         .append("g")
         .attr("class", "arc");
-    //define arc function
-    var arc = d3.arc()
-        .outerRadius(that.outerR)
-        .innerRadius(that.innerR);
     //draw the arcs
-    arcPaths=arcs.append("path")
-          .attr("d", arc)
-          .attr("fill", function(d,i){
-            return that.colors[i];
-          });
+    arcPaths=newArcs
+        .append("path")
+        .attr("d", arc)
+        .attr("fill", function(d,i){
+          return that.colors[i];
+        });
+    arcs.exit().remove();
 };
 
 function createChart(){
