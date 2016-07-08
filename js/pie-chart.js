@@ -48,10 +48,12 @@ PieChart.prototype.drawTimelinePie = function(){
       .attr("transform", "translate("+that.chartW/2+","+that.chartH/2+")");
   //draw initial pie chart
   //that.drawChart(this.data.values[0].values);
+  var lastObj = this.data.values[0];
   this.data.values.forEach(function(obj, i){
     setTimeout(function(){
-      that.drawChart(obj.values, obj.total);
-    }, i*2000);
+      that.drawChart(obj, lastObj);
+      lastObj = obj;
+    }, i*1500);
   });
 };
 
@@ -65,8 +67,8 @@ PieChart.prototype.updateChart=function(newValues){
   console.log(transition);*/
 }
 
-PieChart.prototype.drawChart = function(pieValues, total) {
-  pieValues=pieValues || [];
+PieChart.prototype.drawChart = function(obj, lastObj) {
+  var pieValues=obj.values || [];
   if(pieValues.length==0){
     alert("No data defined for first piechart. Nothing to plot.");
     return;
@@ -76,7 +78,7 @@ PieChart.prototype.drawChart = function(pieValues, total) {
     var arcData = that.calculateArcData(pieValues);
     //define arc function
     var arc = d3.arc()
-        .outerRadius(that.outerRScale(total))
+        .outerRadius(that.outerRScale(obj.total))
         .innerRadius(that.innerR);
     //generate arc elements
     var arcs = this.svg.selectAll(".arc")
@@ -108,8 +110,12 @@ function createChart(){
           },{
             total: 75,
             values:[10,20,30,10,5]
-          }]
-        },
+          },
+          {
+            total: 100,
+            values:[1,20,30,40,9]
+          }
+        ]},
         parentEle : $("#thePieChart")[0],
         colors:["#69B242","#42B285", "#4296B2 ", "#4262B2", "#6542B2", "#B2427E", "#B24247", "#B27A42", "#8FB242"],
         isTimeline: true
