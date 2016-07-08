@@ -48,26 +48,17 @@ PieChart.prototype.drawTimelinePie = function(){
       .attr("transform", "translate("+that.chartW/2+","+that.chartH/2+")");
   //draw initial pie chart
   //that.drawChart(this.data.values[0].values);
-  var lastObj = this.data.values[0];
+  var isFirst=true;
   this.data.values.forEach(function(obj, i){
     setTimeout(function(){
-      that.drawChart(obj, lastObj);
-      lastObj = obj;
+      that.drawChart(obj, isFirst);
+      isFirst = false;
     }, i*1500);
   });
 };
 
-PieChart.prototype.updateChart=function(newValues){
-  var arcData = this.calculateArcData(newValues);
-  //transition from old angles to new angles
-  /*var transition = d3.selectAll(".arc")
-    .transition()
-    .duration(500)
-    .call(tweenAngles, )
-  console.log(transition);*/
-}
-
-PieChart.prototype.drawChart = function(obj, lastObj) {
+PieChart.prototype.drawChart = function(obj, isFirst) {
+  isFirst = isFirst==undefined?true:isFirst;
   var pieValues=obj.values || [];
   if(pieValues.length==0){
     alert("No data defined for first piechart. Nothing to plot.");
@@ -81,21 +72,41 @@ PieChart.prototype.drawChart = function(obj, lastObj) {
         .outerRadius(that.outerRScale(obj.total))
         .innerRadius(that.innerR);
     //generate arc elements
-    var arcs = this.svg.selectAll(".arc")
-        .data(arcData, function(d,i){
-          return d.startAngle+"-"+d.endAngle+"-"+i; //key
+    var arcSelect = this.svg.selectAll(".arc");
+    if(isFirst || arcSelect.length==0){
+      var arcs = arcSelect
+          .data(arcData);
+      var newArcs = arcs.enter()
+          .append("g")
+          .attr("class", "arc");
+      //if first plot in timeseries, plot arcs immediately
+      arcPaths=newArcs
+          .append("path")
+          .attr("d", arc)
+          .attr("fill", function(d,i){
+            return that.colors[i];
+          });
+      //define exit
+      arcs.exit().remove();
+    }else{
+      //tweening function
+      var tweenAngle = function(transition, newArcData){
+        transition.attrTween("d", function(d){ //create attrTween on path's "d" attribute
+          var interpolateStart = d3.interpolate(d.startAngle, newArcData[d.index].startAngle);
+          var interpolateEnd = d3.interpolate(d.endAngle, newArcData[d.index].endAngle);
+          return function(t){
+            d.startAngle=interpolateStart(t);
+            d.endAngle=interpolateEnd(t);
+            return arc(d);
+          };
         });
-    var newArcs = arcs.enter()
-        .append("g")
-        .attr("class", "arc");
-    //draw the arcs
-    arcPaths=newArcs
-        .append("path")
-        .attr("d", arc)
-        .attr("fill", function(d,i){
-          return that.colors[i];
-        });
-    arcs.exit().remove();
+      };
+      //transition to new angles smoothly
+      arcSelect.selectAll("path")
+        .transition()
+        .duration(1000)
+        .call(tweenAngle, arcData);
+    }
 };
 
 function createChart(){
