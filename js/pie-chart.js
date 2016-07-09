@@ -48,11 +48,12 @@ PieChart.prototype.drawTimelinePie = function(){
       .attr("transform", "translate("+that.chartW/2+","+that.chartH/2+")");
   //draw initial pie chart
   //that.drawChart(this.data.values[0].values);
-  var isFirst=true;
+  that.drawChart(this.data.values[0], true);
+  var lastTotal;
   this.data.values.forEach(function(obj, i){
+    if(i==0) return;
     setTimeout(function(){
-      that.drawChart(obj, isFirst);
-      isFirst = false;
+      that.drawChart(obj, false);
     }, i*1500);
   });
 };
@@ -65,48 +66,50 @@ PieChart.prototype.drawChart = function(obj, isFirst) {
     return;
   }
     var that=this;
-    //calculate arc data
-    var arcData = that.calculateArcData(pieValues);
-    //define arc function
-    var arc = d3.arc()
-        .outerRadius(that.outerRScale(obj.total))
+    var arcData = that.calculateArcData(pieValues); //calculate arc data
+    var arc = d3.arc()  //define arc function
         .innerRadius(that.innerR);
-    //generate arc elements
-    var arcSelect = this.svg.selectAll(".arc");
-    if(isFirst || arcSelect.length==0){
-      var arcs = arcSelect
+    if(isFirst){//if first plot in timeseries
+      that.outerR = that.outerRScale(obj.total);
+      arc.outerRadius(that.outerR);
+      var arcs = this.svg.selectAll(".arc") //bind data
           .data(arcData);
       var newArcs = arcs.enter()
           .append("g")
           .attr("class", "arc");
-      //if first plot in timeseries, plot arcs immediately
-      arcPaths=newArcs
+      arcPaths=newArcs //plot arcs
           .append("path")
-          .attr("d", arc)
           .attr("fill", function(d,i){
             return that.colors[i];
           });
-      //define exit
-      arcs.exit().remove();
-    }else{
-      //tweening function
-      var tweenAngle = function(transition, newArcData){
-        transition.attrTween("d", function(d){ //create attrTween on path's "d" attribute
-          var interpolateStart = d3.interpolate(d.startAngle, newArcData[d.index].startAngle);
-          var interpolateEnd = d3.interpolate(d.endAngle, newArcData[d.index].endAngle);
-          return function(t){
-            d.startAngle=interpolateStart(t);
-            d.endAngle=interpolateEnd(t);
-            return arc(d);
-          };
-        });
-      };
-      //transition to new angles smoothly
-      arcSelect.selectAll("path")
-        .transition()
-        .duration(1000)
-        .call(tweenAngle, arcData);
+      arcs.exit().remove();  //define exit
     }
+    var tweenAngle = function(transition, newArcData, newOuterRadius, isFirst){//tweening function
+      transition.attrTween("d", function(d){ //create attrTween on path's "d" attribute
+        var interpolateStart = d3.interpolate(isFirst?0:d.startAngle, newArcData[d.index].startAngle);
+        var interpolateEnd = d3.interpolate(isFirst?0:d.endAngle, newArcData[d.index].endAngle);
+        var interpolateRadius = d3.interpolate(that.outerR, newOuterRadius);
+        return function(t){
+          arc.outerRadius(interpolateRadius(t));
+          d.startAngle=interpolateStart(t);
+          d.endAngle=interpolateEnd(t);
+          return arc(d);
+        };
+      });
+    };
+    var count=0;
+    this.svg.selectAll(".arc") .selectAll("path")  //transition to new angles smoothly
+      .transition()
+      .duration(1000)
+      .call(tweenAngle, arcData, that.outerRScale(obj.total),  isFirst)
+      .on("start",function(){
+        count++;
+      }).on("end", function(){ //callback to check if all transitions done.
+        count--;
+        if(!n){
+          that.outerR = that.outerRScale(obj.total); //update outerR if all done
+        }
+      });
 };
 
 function createChart(){
