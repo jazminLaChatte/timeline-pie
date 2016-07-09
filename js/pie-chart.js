@@ -106,7 +106,7 @@ PieChart.prototype.drawChart = function(obj, isFirst) {
         count++;
       }).on("end", function(){ //callback to check if all transitions done.
         count--;
-        if(!n){
+        if(!count){
           that.outerR = that.outerRScale(obj.total); //update outerR if all done
         }
       });
