@@ -1,10 +1,20 @@
-var BirthsByAgeChart={
+var BirthsByAgePlot={
     chartObj: undefined,
     data:[],
     init: function(){
         this.prepData(this.getRawData());
-        this.chartObj=new PieChart(this.data);
-        console.log(this.chartObj.data);
+        var chart = new PieChart({
+          chartW:500,
+          chartH:500,
+          data:{
+            categories:["U15", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45+"],
+            values: this.data
+          },
+          parentEle : $("#thePieChart")[0],
+          colors:["#69B242","#42B285", "#4296B2 ", "#4262B2", "#6542B2", "#B2427E", "#B24247", "#B27A42", "#8FB242"],
+          isTimeline: true
+        });
+        chart.drawTimelinePie();
     },
     prepData: function(rawData){
         this.data=[];
@@ -14,18 +24,8 @@ var BirthsByAgeChart={
             var obj={
                 year:d[0],
                 total:d[1],
-                categories:{
-                    age_u15:a[2],
-                    age_15to19:d[3],
-                    age_20to24:d[4],
-                    age_25to29:d[5],
-                    age_30to34:d[6],
-                    age_35to39:d[7],
-                    age_40to44:d[8],
-                    age_45u:d[9],
-                    age_unknown:d[10]
-                }
-            };
+                values:[d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10]]
+              }
             that.data.push(obj);
         });
     },

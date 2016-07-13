@@ -43,9 +43,13 @@ PieChart.prototype.drawTimelinePie = function(){
   this.svg = d3.select(that.parentEle)
       .append("svg")
       .attr("width", that.chartW)
-      .attr("height", that.chartH)
-      .append("g")
-      .attr("transform", "translate("+that.chartW/2+","+that.chartH/2+")");
+      .attr("height", that.chartH);
+  this.svg.piechart = this.svg.append("g")   //g for the pie chart
+      .attr("transform", "translate("+that.chartW/2+","+that.chartH/2+")")
+      .attr("class", "pie-chart")
+  this.svg.timeline = this.svg.append("g")   //g for the timeline
+      .attr("transform", "translate("+that.chartW/2+","+that.chartH/2+")")
+      .attr("class", "timeline");
   //draw initial pie chart
   //that.drawChart(this.data.values[0].values);
   that.drawChart(this.data.values[0], true);
@@ -72,7 +76,8 @@ PieChart.prototype.drawChart = function(obj, isFirst) {
     if(isFirst){//if first plot in timeseries
       that.outerR = that.outerRScale(obj.total);
       arc.outerRadius(that.outerR);
-      var arcs = this.svg.selectAll(".arc") //bind data
+      var arcs = this.svg.piechart
+          .selectAll(".arc") //bind data
           .data(arcData);
       var newArcs = arcs.enter()
           .append("g")
@@ -98,7 +103,8 @@ PieChart.prototype.drawChart = function(obj, isFirst) {
       });
     };
     var count=0;
-    this.svg.selectAll(".arc") .selectAll("path")  //transition to new angles smoothly
+    this.svg.piechart
+      .selectAll(".arc") .selectAll("path")  //transition to new angles smoothly
       .transition()
       .duration(1000)
       .call(tweenAngle, arcData, that.outerRScale(obj.total),  isFirst)
