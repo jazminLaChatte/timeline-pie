@@ -62,3 +62,7 @@ textarea {
     display: none !important;
     visibility: hidden;
 }
+
+.time-axis{
+  fill: #ff0000
+}
