@@ -2,6 +2,7 @@ var PieChart = function(config){
     config = config || {};
     //init vars and methods
     this.bottomMargin = 40; //bottom margin for drawing timeline
+    this.delay=1000;
     this.chartW=400;
     this.chartH=400;
     this.isTimeline=false;
@@ -73,7 +74,7 @@ PieChart.prototype.drawTimelinePie = function(){
     if(i==0) return;
     setTimeout(function(){
       that.drawChart(obj, false);
-    }, i*1500);
+    }, i*that.delay);
   });
 };
 
@@ -85,40 +86,57 @@ PieChart.prototype.drawChart = function(obj, isFirst) {
     return;
   }
     var that=this;
-    //draw timeline axis indicator
-    var axis = that.svg.timeline
-      .selectAll(".timeline-indicator")
-      .data([obj.axisValue]);
-    axis.enter()
-      .append("circle")
-      .attr("cy",1)
-      .attr("r", 4)
-      .attr("class", "timeline-indicator");
-    this.svg.timeline.selectAll(".timeline-indicator")
-      .attr("cx", function(d){
-        return that.timelineAxisScale(d);
-      });
-    axis.exit().remove();
-
     var arcData = that.calculateArcData(pieValues); //calculate arc data
     var arc = d3.arc()  //define arc function
         .innerRadius(that.innerR);
     if(isFirst){//if first plot in timeseries
-      that.outerR = that.outerRScale(obj.total);
-      arc.outerRadius(that.outerR);
-      var arcs = this.svg.piechart
+        //draw timeline axis indicator
+        var axis = that.svg.timeline
+          .selectAll(".timeline-g")
+          .data([obj.axisValue]);
+        var onenter = axis.enter()
+            .append("g")
+            .attr("class", "timeline-g");
+        onenter.append("circle")
+          .attr("cy",1)
+          .attr("r", 4)
+          .attr("class", "timeline-indicator");
+        onenter.append("text")
+          .attr("class", "timeline-text")
+          .attr("x", -10)
+          .attr("y", 20);
+        axis.exit().remove();
+        //draw pie
+        that.outerR = that.outerRScale(obj.total);
+        arc.outerRadius(that.outerR);
+        var arcs = this.svg.piechart
           .selectAll(".arc") //bind data
           .data(arcData);
-      var newArcs = arcs.enter()
+        var newArcs = arcs.enter()
           .append("g")
           .attr("class", "arc");
-      arcPaths=newArcs //plot arcs
+        arcPaths=newArcs //plot arcs
           .append("path")
           .attr("fill", function(d,i){
             return that.colors[i];
           });
-      arcs.exit().remove();  //define exit
+        arcs.exit().remove();  //define exit
     }
+    //transition timeline axis
+    this.svg.timeline.selectAll(".timeline-indicator")
+        .transition()
+        .duration(that.delay*(2/3))
+        .attrTween("cx", function(d){
+            var interpolate = d3.interpolate(that.timelineAxisScale(this.parentElement.__data__),that.timelineAxisScale(obj.axisValue));
+            that.svg.selectAll(".timeline-g")
+              .data([obj.axisValue]);
+            return interpolate;
+        }).on("end", function(){
+            that.svg.selectAll(".timeline-text")
+                .text(obj.axisValue);
+        });
+
+    //transition arcs
     var tweenAngle = function(transition, newArcData, newOuterRadius, isFirst){//tweening function
       transition.attrTween("d", function(d){ //create attrTween on path's "d" attribute
         var interpolateStart = d3.interpolate(isFirst?0:d.startAngle, newArcData[d.index].startAngle);
@@ -136,7 +154,7 @@ PieChart.prototype.drawChart = function(obj, isFirst) {
     this.svg.piechart
       .selectAll(".arc") .selectAll("path")  //transition to new angles smoothly
       .transition()
-      .duration(1000)
+      .duration(that.delay*(2/3))
       .call(tweenAngle, arcData, that.outerRScale(obj.total),  isFirst)
       .on("start",function(){
         count++;
@@ -178,5 +196,7 @@ function createChart(){
 };
 
 function doTest(){
-  createChart();
+  //createChart();
+  BirthsByAgePlot.init();
 }
+
